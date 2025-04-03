@@ -1,0 +1,1 @@
+alive(mike) :- eats(mike), drinks(mike).
