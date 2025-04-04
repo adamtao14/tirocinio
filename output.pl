@@ -158,4 +158,5 @@ extract_kernel_guesses_from_xml(XMLText, KernelGuesses) :-
 
 father(john,mike).
 
+son(mike, john).
 

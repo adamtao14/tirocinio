@@ -93,14 +93,14 @@ def display_rules(file_name: str, pattern: Optional[str] = None):
     
     print(f"Rules found ({len(rules)} total{', filtered by: ' + pattern if pattern else ''}):")
     for i, (head, body) in enumerate(rules, 1):
-        print("\n")
+       
         if pattern:
             if pattern in head:
-                print(f"{i}. [green]{head}[/green] :- {body}.")
+                print(f"\n{i}. [green]{head}[/green] :- {body}.")
         else:
-            print(f"{i}. [green]{head}[/green] :- {body}.")
+            print(f"\n{i}. [green]{head}[/green] :- {body}.")
 
-
+# Add a rule to the specified Prolog file
 def add_rule_to_file(file_name, in_line, from_file):
     if in_line:
         to_add = in_line
@@ -121,6 +121,71 @@ def add_rule_to_file(file_name, in_line, from_file):
     return add_to_file(file_name, to_add)
 
 
+def delete_fact_from_file(file_name, content):
+    lines = []
+    with open(file_name, 'r') as file:
+        lines = file.readlines()
+    target_lines = content.splitlines()
+    found_at_least_once = False
+    result = []
+    i = 0
+    while i < len(lines):
+        if lines[i].strip("\n") == target_lines[0].strip("\n"):
+            match = True
+            for j in range(1, len(target_lines)):
+                if i+j >= len(lines) or lines[i+j] != target_lines[j].strip("\n"):
+                    match = False
+                    break
+            if match:
+                i += len(target_lines)
+                found_at_least_once = True
+                continue
+        result.append(lines[i])
+        i += 1
+    
+    output = ''.join(result)
+    if found_at_least_once:
+        print("[green]Fact eliminated successfully![/green]")
+    else:
+        print("[red]Fact was not found in the file![/red]")
+    with open(file_name,'w') as output_file:
+        output_file.write(output)
+    return True
+
+# Query the specified Prolog file with the given query
+def query_prolog_file(file_name, query):
+    if query == "" or query is None:
+        print("[red]You must specify a query![/red]")
+        return False
+    try:
+        prolog = Prolog()
+        prolog.consult(file_name)
+
+        if not query.endswith('.'):
+            query += '.'
+        
+        results = list(prolog.query(query))
+        
+        if not results:
+            print("[red]Query returned no results.[/red]")
+            return False
+        
+        print(f"Results for query '{query}':")
+        
+        for i, result in enumerate(results, 1):
+            print(f"\nResult {i}:")
+            for key, value in result.items():
+                print(f"  {key} = {value}")
+
+        return True        
+    except Exception as e:
+        print(f"Error executing query: {str(e)}")
+        return False
+
+
+
+# COMMANDS
+
 @click.group()
 def cli():
     """VAPT 2.0 - Vulnerability Assessment and Penetration Testing Tool"""
@@ -130,7 +195,6 @@ def cli():
 @click.argument('file_name', type=click.Path(exists=True))
 @click.argument('fact')
 def add(file_name, fact):
-    """Add a fact to the specified Prolog file"""
     if not validate_prolog_file(file_name):
         return
     return add_fact(file_name, fact)
@@ -140,7 +204,6 @@ def add(file_name, fact):
 @click.argument('file_name', type=click.Path(exists=True))
 @click.option('--predicate', '-p', help='Show specific predicate only')
 def facts(file_name, predicate):
-    """Display facts from the specified Prolog file"""
     if not validate_prolog_file(file_name):
         return
     display_facts(file_name, predicate)
@@ -149,7 +212,6 @@ def facts(file_name, predicate):
 @click.argument('file_name', type=click.Path(exists=True))
 @click.option('--pattern', '-p', help='Show rules containing the specified pattern')
 def rules(file_name, pattern = None):
-    """Display rules from the specified Prolog file"""
     if not validate_prolog_file(file_name):
         return
     display_rules(file_name, pattern)
@@ -164,7 +226,21 @@ def add_rule(file_name, in_line: Optional[str] = None, from_file: Optional[str] 
     else:
         return add_rule_to_file(file_name,in_line,from_file)
         
+@cli.command()
+@click.argument('file_name', type=click.Path(exists=True))
+@click.argument('fact')
+def delete_fact(file_name, fact):
+    if not validate_prolog_file(file_name):
+        return
+    return delete_fact_from_file(file_name,fact)
 
 
+@cli.command()
+@click.argument('file_name', type=click.Path(exists=True))
+@click.argument('query')
+def query(file_name, query):
+    if not validate_prolog_file(file_name):
+        return
+    return query_prolog_file(file_name, query)
 if __name__ == '__main__':
     cli()
