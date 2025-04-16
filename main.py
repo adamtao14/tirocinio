@@ -1,12 +1,18 @@
-import click, re
+import time
+import click, re, os
+from random import randint
 from rich import print
-from os import path
-from pyswip import Prolog, Variable
+from pyswip import Prolog
 from typing import Optional
+from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 def validate_prolog_file(file_name: str) -> bool:
     """Check if the file exists and is a valid Prolog file"""
-    if not path.exists(file_name):
+    if not os.path.exists(file_name):
         print(f"Error: File '{file_name}' does not exist")
         return False
     if not file_name.endswith('.pl'):
@@ -183,6 +189,30 @@ def query_prolog_file(file_name, query):
         return False
 
 
+def llm_generation(user_input):
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    # keep track of elapsed time for response
+    print(f"[yellow]Generation in progress...\n[/yellow]")
+    start_time = time.time()
+    response = client.responses.create(
+        model="gpt-4.1",
+        input=os.getenv("BASE_PROMPT") + "\n" + user_input
+    )
+    end_time = time.time()
+    elapsed_time = round(end_time - start_time, 3)
+    #write to prolog file the response
+    file_name = user_input.replace(' ', '_')
+    # if the file_name already exists, add a random number to the file_name
+    if os.path.exists(file_name + ".pl"):
+        file_name += "_" + str(randint(1,100))
+    
+    file_name += ".pl"
+    with open(file_name, "w") as f:
+        f.write(response.output_text)
+
+    print(f"[green]Generated {file_name}[/green]")
+    print(f"Elapsed time: {elapsed_time}s\n")
+    return True
 
 # COMMANDS
 
@@ -242,5 +272,14 @@ def query(file_name, query):
     if not validate_prolog_file(file_name):
         return
     return query_prolog_file(file_name, query)
+
+@cli.command()
+@click.argument('input')
+def gen_ai(input = ""):
+    if input == "":
+        return
+    else:
+        return llm_generation(input)
+
 if __name__ == '__main__':
     cli()
