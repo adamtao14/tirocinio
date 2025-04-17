@@ -38,7 +38,7 @@ def add_fact(file_name: str, fact: str) -> bool:
         print("[red]Error adding fact![/red]")
 
 # Display facts from the specified Prolog file
-def display_facts(file_name: str, predicate: Optional[str] = None):
+def display_facts(file_name: str, pattern: Optional[str] = None):
 
     with open(file_name, 'r') as file:
         content = file.read()
@@ -60,15 +60,15 @@ def display_facts(file_name: str, predicate: Optional[str] = None):
     facts = []
     for match in fact_pattern.finditer(content):
         pred_name, pred_args = match.groups()
-        if predicate is None or predicate.lower() in pred_name.lower():
+        if pattern is None or pattern.lower() in pred_name.lower():
             facts.append((pred_name, pred_args))
     
     if not facts:
-        filter_msg = f" matching '{predicate}'" if predicate else ""
+        filter_msg = f" matching '{pattern}'" if pattern else ""
         print(f"No proper facts{filter_msg} found in the file.")
         return
     
-    print(f"Facts found ({len(facts)} total{', filtered by: ' + predicate if predicate else ''}):")
+    print(f"Facts found ({len(facts)} total{', filtered by: ' + pattern if pattern else ''}):")
     for i, (name, args) in enumerate(facts, 1):
         print(f"{i}. {name}({args}).")   
 
@@ -106,6 +106,40 @@ def display_rules(file_name: str, pattern: Optional[str] = None):
         else:
             print(f"\n{i}. [green]{head}[/green] :- {body}.")
 
+
+# Display rules from a specified Prolog file
+def display_predicates(file_name: str, pattern: Optional[str] = None):
+    with open(file_name, 'r') as file:
+        content = file.read()
+    
+    # Remove comments (optional but recommended)
+    content = re.sub(r'%.*', '', content)  # Remove line comments
+    content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)  # Remove block comments
+    
+    # Regex pattern to match Prolog rules
+    rule_pattern = re.compile(
+        r'^\s*([a-z][a-zA-Z0-9_]*)'  # Head of the rule
+        r'\s*:-'                               # :- operator
+        r'\s*(.*?)'                             # Body of the rule
+        r'\s*\.\s*$',                           # Ending period
+        re.MULTILINE | re.DOTALL
+    )
+    
+    rules = rule_pattern.findall(content)
+    
+    if not rules:
+        print("No predicates found in the file.")
+        return
+    
+    print(f"Predicates found ({len(rules)} total{', filtered by: ' + pattern if pattern else ''}):")
+    for i, (head, body) in enumerate(rules, 1):
+       
+        if pattern:
+            if pattern in head:
+                print(f"\n{i}. [green]{head}[/green] :- {body}.")
+        else:
+            print(f"\n{i}. [green]{head}[/green] :- {body}.")
+
 # Add a rule to the specified Prolog file
 def add_rule_to_file(file_name, in_line, from_file):
     if in_line:
@@ -126,7 +160,7 @@ def add_rule_to_file(file_name, in_line, from_file):
     
     return add_to_file(file_name, to_add)
 
-
+# Delete a specific fact from a Prolog file
 def delete_fact_from_file(file_name, content):
     lines = []
     with open(file_name, 'r') as file:
@@ -188,11 +222,10 @@ def query_prolog_file(file_name, query):
         print(f"Error executing query: {str(e)}")
         return False
 
-
+# Generate via OpenAI's API a specific Prolog file for a given vulenerability attack
 def llm_generation(user_input):
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    # keep track of elapsed time for response
-    print(f"[yellow]Generation in progress...\n[/yellow]")
+    print(f"[yellow]Generating response...\n[/yellow]")
     start_time = time.time()
     response = client.responses.create(
         model="gpt-4.1",
@@ -200,7 +233,7 @@ def llm_generation(user_input):
     )
     end_time = time.time()
     elapsed_time = round(end_time - start_time, 3)
-    #write to prolog file the response
+   
     file_name = user_input.replace(' ', '_')
     # if the file_name already exists, add a random number to the file_name
     if os.path.exists(file_name + ".pl"):
@@ -208,10 +241,36 @@ def llm_generation(user_input):
     
     file_name += ".pl"
     with open(file_name, "w") as f:
-        f.write(response.output_text)
+        # remove first and last line from response.output_text because of response style
+        # ```prolog .... ```    
+        f.write(response.output_text[9:-3])
 
     print(f"[green]Generated {file_name}[/green]")
     print(f"Elapsed time: {elapsed_time}s\n")
+    return True
+# Get a report of what can be analysed from a given Prolog file
+def suggest_from_file(file_name):
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    output = ""
+    with open(file_name, "r") as f:
+        text = f.readlines()
+        output = ' '.join(text)
+    if output == "":
+        print("[red]Empty prolog file, please provide a non empty one![/red]")
+        return False
+    
+    print(f"[yellow]Generating response...\n[/yellow]")
+    start_time = time.time()
+    response = client.responses.create(
+        model="gpt-4.1",
+        input=os.getenv("SUGGESTION_PROMPT") + "\n" + output
+    )
+    end_time = time.time()
+    elapsed_time = round(end_time - start_time, 3)
+    print(f"[green]Response generated[/green]")
+    print(f"Elapsed time: {elapsed_time}s")
+    print("-----------------\n")
+    print(response.output_text)
     return True
 
 # COMMANDS
@@ -229,14 +288,22 @@ def add(file_name, fact):
         return
     return add_fact(file_name, fact)
 
+@cli.command()
+@click.argument('file_name', type=click.Path(exists=True))
+@click.option('--pattern', '-p', help='Show specific pattern only')
+def predicates(file_name, pattern):
+    if not validate_prolog_file(file_name):
+        return
+    display_predicates(file_name, pattern)
+
 
 @cli.command()
 @click.argument('file_name', type=click.Path(exists=True))
-@click.option('--predicate', '-p', help='Show specific predicate only')
-def facts(file_name, predicate):
+@click.option('--pattern', '-p', help='Show specific pattern only')
+def facts(file_name, pattern):
     if not validate_prolog_file(file_name):
         return
-    display_facts(file_name, predicate)
+    display_facts(file_name, pattern)
 
 @cli.command()
 @click.argument('file_name', type=click.Path(exists=True))
@@ -248,7 +315,7 @@ def rules(file_name, pattern = None):
 
 @cli.command()
 @click.argument('file_name', type=click.Path(exists=True))
-@click.option('--in-line', '-i', help='Adda new rule in line')
+@click.option('--in-line', '-i', help='Add a new rule in line')
 @click.option('--from-file', '-f', type=click.Path(exists=True), help='Add rules from a specified file')
 def add_rule(file_name, in_line: Optional[str] = None, from_file: Optional[str] = None):
     if not validate_prolog_file(file_name):
@@ -280,6 +347,13 @@ def gen_ai(input = ""):
         return
     else:
         return llm_generation(input)
+
+@cli.command()
+@click.argument('file_name', type=click.Path(exists=True))
+def suggest(file_name):
+    if not validate_prolog_file(file_name):
+        return
+    return suggest_from_file(file_name)
 
 if __name__ == '__main__':
     cli()
