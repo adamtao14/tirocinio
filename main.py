@@ -6,7 +6,7 @@ from pyswip import Prolog
 from typing import Optional
 from openai import OpenAI
 from dotenv import load_dotenv
-
+from prompts import BASE_PROMPT, SUGGESTION_PROMPT
 load_dotenv()
 
 
@@ -229,7 +229,7 @@ def llm_generation(user_input):
     start_time = time.time()
     response = client.responses.create(
         model="gpt-4.1",
-        input=os.getenv("BASE_PROMPT") + "\n" + user_input
+        input=BASE_PROMPT + "\n" + user_input
     )
     end_time = time.time()
     elapsed_time = round(end_time - start_time, 3)
@@ -263,7 +263,7 @@ def suggest_from_file(file_name):
     start_time = time.time()
     response = client.responses.create(
         model="gpt-4.1",
-        input=os.getenv("SUGGESTION_PROMPT") + "\n" + output
+        input=SUGGESTION_PROMPT + "\n" + output
     )
     end_time = time.time()
     elapsed_time = round(end_time - start_time, 3)
