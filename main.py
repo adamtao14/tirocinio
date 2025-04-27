@@ -188,8 +188,11 @@ def delete_fact_from_file(file_name, content):
         print("[green]Fact eliminated successfully![/green]")
     else:
         print("[red]Fact was not found in the file![/red]")
-    with open(file_name,'w') as output_file:
-        output_file.write(output)
+    try:    
+        with open(file_name,'w') as output_file:
+            output_file.write(output)
+    except Exception as e:
+        print("[red]Failed to write to file[/red]")
     return True
 
 # Query the specified Prolog file with the given query
@@ -240,10 +243,13 @@ def llm_generation(user_input):
         file_name += "_" + str(randint(1,100))
     
     file_name += ".pl"
-    with open(file_name, "w") as f:
-        # remove first and last line from response.output_text because of response style
-        # ```prolog .... ```    
-        f.write(response.output_text[9:-3])
+    try:
+        with open(file_name, "w") as f:
+            # remove first and last line from response.output_text because of response style
+            # ```prolog .... ```    
+            f.write(response.output_text[9:-3])
+    except Exception as e:
+        print("[red]Failed to write to file[/red]")
 
     print(f"[green]Generated {file_name}[/green]")
     print(f"Elapsed time: {elapsed_time}s\n")
@@ -280,8 +286,12 @@ def suggest_from_files(file_names, output_markdown):
     
 
     if output_markdown != "":
-        with open(output_markdown, 'w') as f:
-            f.write(response.output_text)
+        try:
+            with open(output_markdown, 'w') as f:
+                f.write(response.output_text)
+        except Exception as e:
+            print("[red]Failed to write to file[/red]")
+            
         print(f"[green]Response saved in {output_markdown}[/green]")
         print(f"Elapsed time: {elapsed_time}s")
     else:
