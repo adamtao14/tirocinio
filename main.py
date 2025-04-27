@@ -248,29 +248,47 @@ def llm_generation(user_input):
     print(f"[green]Generated {file_name}[/green]")
     print(f"Elapsed time: {elapsed_time}s\n")
     return True
-# Get a report of what can be analysed from a given Prolog file
-def suggest_from_file(file_name):
+# Get a report of what can be analysed from a single or a list of Prolog files
+def suggest_from_files(file_names, output_markdown):
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    output = ""
-    with open(file_name, "r") as f:
-        text = f.readlines()
-        output = ' '.join(text)
-    if output == "":
-        print("[red]Empty prolog file, please provide a non empty one![/red]")
+    combined_output = ""
+    
+    # Read and combine all files
+    for file_name in file_names:
+        with open(file_name, "r") as f:
+            text = f.readlines()
+            combined_output += ' '.join(text) + "\n\n"  # Separate files with blank lines
+    
+    if combined_output.strip() == "":
+        print("[red]All provided Prolog files are empty![/red]")
         return False
     
-    print(f"[yellow]Generating response...\n[/yellow]")
+    print(f"[yellow]Generating response for {len(file_names)} file(s)...\n[/yellow]")
     start_time = time.time()
-    response = client.responses.create(
-        model="gpt-4.1",
-        input=SUGGESTION_PROMPT + "\n" + output
-    )
+    
+    try:
+        response = client.responses.create(
+            model="gpt-4.1",
+            input=SUGGESTION_PROMPT + "\n" + combined_output
+        )
+    except Exception as e:
+        print(f"[red]Error generating response: {str(e)}[/red]")
+        return False
+    
     end_time = time.time()
     elapsed_time = round(end_time - start_time, 3)
-    print(f"[green]Response generated[/green]")
-    print(f"Elapsed time: {elapsed_time}s")
-    print("-----------------\n")
-    print(response.output_text)
+    
+
+    if output_markdown != "":
+        with open(output_markdown, 'w') as f:
+            f.write(response.output_text)
+        print(f"[green]Response saved in {output_markdown}[/green]")
+        print(f"Elapsed time: {elapsed_time}s")
+    else:
+        print(f"[green]Response generated[/green]")
+        print(f"Elapsed time: {elapsed_time}s")
+        print("-----------------\n")
+        print(response.output_text)
     return True
 
 # COMMANDS
@@ -349,11 +367,14 @@ def gen_ai(input = ""):
         return llm_generation(input)
 
 @cli.command()
-@click.argument('file_name', type=click.Path(exists=True))
-def suggest(file_name):
-    if not validate_prolog_file(file_name):
+@click.argument('file_names', type=click.Path(exists=True), nargs=-1)
+@click.option('--output-markdown', '-o', type=click.Path(), help="Save the report to a Markdown file")
+def suggest(file_names, output_markdown):
+    valid_files = [f for f in file_names if validate_prolog_file(f)]
+    if not valid_files:
+        click.echo("No valid Prolog files provided")
         return
-    return suggest_from_file(file_name)
+    return suggest_from_files(valid_files, output_markdown) 
 
 if __name__ == '__main__':
     cli()

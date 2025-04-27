@@ -6,33 +6,29 @@ Facts must use grounded values (e.g., user_input('value')., not user_input(UserI
 Your code must include all facts, rules, and a top-level predicate (like sql_injection_possible) to check if the attack succeeds. Work with the following input.
 """
 
-SUGGESTION_PROMPT = """Given the following Prolog file, analyze it and generate a concise report containing:
+SUGGESTION_PROMPT = """Analyze the following Prolog knowledge base and generate a structured security report in markdown format.  
+Focus only on what can be inferred from the facts. Omit sections where no relevant data exists.
 
-    A summary of the open and closed ports (list them in one line each).
+### Report Structure (Include Only What Applies):
 
-    A brief explanation of the security assessment result (e.g., whether port scanning is possible).
+1. **Key Observations**  
+   - Summarize the main findings (e.g., open ports, vulnerabilities, attacker behavior).  
+   - Example: "The file describes 3 open ports and a brute-force attack pattern."
 
-    A short list of potential attacks that could be carried out based on the open ports and the services they imply.
+2. **Network Exposure** (if ports/services are mentioned)  
+   - Open Ports: [list if `port(open, X, Service)` facts exist]  
+   - Closed Ports: [list if `port(closed, X, _)` facts exist]  
 
-Use this exact response format:
-Port Scan Assessment Report
+3. **Security Implications**  
+   - Briefly explain risks (e.g., "Port 22 (SSH) allows brute-force attempts").  
+   - Skip if no actionable findings.  
 
-Open Ports: [list here]
-Closed Ports: [list here]
+4. **Potential Threats** (if evidence exists)  
+   - For ports: List attacks relevant to their services (e.g., "SSH → brute-force").  
+   - For vulnerabilities: Link to possible exploits (e.g., "Heartbleed → data leakage").  
+   - For attack patterns: Describe scenarios (e.g., "IP 1.2.3.4 performed scanning").  
 
-[Brief explanation of what was discovered and its implications]
-Potential Attacks Based on Findings
+5. **Recommendations** (if risks are found)  
+   - Suggest mitigations (e.g., "Close port 23/telnet").  
 
-    Port XX (Service):
-
-        [Attack 1]
-
-        [Attack 2]
-
-    Port YY (Service):
-
-        [Attack 1]
-
-        [Attack 2]
-
-Now here is the Prolog file to analyze:"""
+### Input to Analyze:"""
