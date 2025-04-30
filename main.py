@@ -1,5 +1,6 @@
 import click, re, os, time, shutil
 from random import randint
+from utils import is_in_same_dir, delete_temp_file, copy_pl_file
 from rich import print
 from pyswip import Prolog
 from typing import Optional
@@ -195,23 +196,7 @@ def delete_fact_from_file(file_name, content):
         print("[red]Failed to write to file[/red]")
     return True
 
-def is_in_same_dir(current_dir, file_path):
-    abs_path = os.path.abspath(os.path.normpath(file_path))
-    return current_dir == os.path.dirname(abs_path)
 
-def copy_pl_file(file_to_move):
-    current_dir = os.getcwd()
-    abs_path = os.path.abspath(os.path.normpath(file_to_move))
-    file_name = os.path.basename(abs_path)
-    dest = f"{current_dir}\\{file_name}"
-    shutil.copy(abs_path, dest)
-    return dest
-
-def delete_temp_file(file_path):
-    if os.path.exists(file_path):
-        os.remove(file_path)   
-    else:
-        print(f"{file_path} does not exist") 
 
 # Query the specified Prolog file with the given query
 def query_prolog_file(file_name, query):
