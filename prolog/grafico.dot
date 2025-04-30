@@ -1,0 +1,5 @@
+digraph attack_flow {
+  "scan" -> "find_vuln";
+  "find_vuln" -> "exploit";
+  "exploit" -> "post_exploit";
+}

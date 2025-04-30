@@ -4,3 +4,4 @@ Scripts
 pyvenv.cfg
 .env
 __pycache__
+*.tar.gz

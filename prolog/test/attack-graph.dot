@@ -1,0 +1,13 @@
+digraph G {
+  "Start";
+  "Enumerate";
+  "Exploit";
+  "PrivEsc";
+  "Goal";
+  "End";
+  "Start" -> "Enumerate" [label="nmap -A"];
+  "Enumerate" -> "Exploit" [label="SMBGhost.py"];
+  "Exploit" -> "PrivEsc" [label="ConPTY"];
+  "PrivEsc" -> "Goal" [label="read flag.txt"];
+  "Goal" -> "End" [label="Done!"];
+}

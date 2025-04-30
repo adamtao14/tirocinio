@@ -1,0 +1,42 @@
+% ==========================
+% File: utils/file_utils.pl
+% Operazioni sui file (opzionale)
+% ==========================
+
+:- module(file_utils, [
+		read_lines/2,
+	       	write_lines/2,
+		write_lines_append/2,
+		read_lines_matching/3,
+		substring_contains/2,
+		delete_file_safe/1]).
+
+read_lines(File, Lines) :-
+    setup_call_cleanup(
+        open(File, read, Stream),
+        read_stream_to_codes(Stream, Codes),
+        close(Stream)),
+    atom_codes(Atom, Codes),
+    split_string(Atom, "\n", "", Lines).
+
+write_lines(File, Lines) :-
+    setup_call_cleanup(
+        open(File, write, Stream),
+        forall(member(Line, Lines), format(Stream, "~w~n", [Line])),
+        close(Stream)).
+
+write_lines_append(File, Lines) :-
+    setup_call_cleanup(
+        open(File, append, Stream),
+        forall(member(Line, Lines), format(Stream, "~w~n", [Line])),
+        close(Stream)).
+
+read_lines_matching(File, Substring, MatchingLines) :-
+    read_lines(File, Lines),
+    include(substring_contains(Substring), Lines, MatchingLines).
+
+substring_contains(Needle, Line) :-
+    sub_string(Line, _, _, _, Needle).
+
+delete_file_safe(File) :-
+    ( exists_file(File) -> delete_file(File) ; true ).

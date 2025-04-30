@@ -1,5 +1,4 @@
-import time
-import click, re, os
+import click, re, os, time, shutil
 from random import randint
 from rich import print
 from pyswip import Prolog
@@ -7,6 +6,7 @@ from typing import Optional
 from openai import OpenAI
 from dotenv import load_dotenv
 from prompts import BASE_PROMPT, SUGGESTION_PROMPT
+from halo import Halo
 load_dotenv()
 
 
@@ -195,20 +195,46 @@ def delete_fact_from_file(file_name, content):
         print("[red]Failed to write to file[/red]")
     return True
 
+def is_in_same_dir(current_dir, file_path):
+    abs_path = os.path.abspath(os.path.normpath(file_path))
+    return current_dir == os.path.dirname(abs_path)
+
+def copy_pl_file(file_to_move):
+    current_dir = os.getcwd()
+    abs_path = os.path.abspath(os.path.normpath(file_to_move))
+    file_name = os.path.basename(abs_path)
+    dest = f"{current_dir}\\{file_name}"
+    shutil.copy(abs_path, dest)
+    return dest
+
+def delete_temp_file(file_path):
+    if os.path.exists(file_path):
+        os.remove(file_path)   
+    else:
+        print(f"{file_path} does not exist") 
+
 # Query the specified Prolog file with the given query
 def query_prolog_file(file_name, query):
     if query == "" or query is None:
         print("[red]You must specify a query![/red]")
         return False
     try:
+        spinner = Halo(text='Loading', spinner='dots')
+        spinner.start()
         prolog = Prolog()
-        prolog.consult(file_name)
+        in_same_dir = is_in_same_dir(os.getcwd(), file_name)
+        if not in_same_dir:
+            new_path = copy_pl_file(file_name)
+        else:
+            new_path = file_name
+        prolog.consult(os.path.basename(new_path))
+        
 
         if not query.endswith('.'):
             query += '.'
         
         results = list(prolog.query(query))
-        
+        spinner.stop()
         if not results:
             print("[red]Query returned no results.[/red]")
             return False
@@ -219,16 +245,20 @@ def query_prolog_file(file_name, query):
             print(f"\nResult {i}:")
             for key, value in result.items():
                 print(f"  {key} = {value}")
-
+        if not in_same_dir:
+            delete_temp_file(new_path)
         return True        
     except Exception as e:
+        if not in_same_dir:
+            delete_temp_file(new_path)
         print(f"Error executing query: {str(e)}")
         return False
 
 # Generate via OpenAI's API a specific Prolog file for a given vulenerability attack
 def llm_generation(user_input):
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    print(f"[yellow]Generating response...\n[/yellow]")
+    spinner = Halo(text='Generating response', spinner='dots')
+    spinner.start()
     start_time = time.time()
     response = client.responses.create(
         model="gpt-4.1",
@@ -249,8 +279,10 @@ def llm_generation(user_input):
             # ```prolog .... ```    
             f.write(response.output_text[9:-3])
     except Exception as e:
+        spinner.stop()
         print("[red]Failed to write to file[/red]")
-
+    
+    spinner.stop()
     print(f"[green]Generated {file_name}[/green]")
     print(f"Elapsed time: {elapsed_time}s\n")
     return True
@@ -269,7 +301,9 @@ def suggest_from_files(file_names, output_markdown):
         print("[red]All provided Prolog files are empty![/red]")
         return False
     
-    print(f"[yellow]Generating response for {len(file_names)} file(s)...\n[/yellow]")
+    spinner = Halo(text='Generating response', spinner='dots')
+    spinner.start()
+    
     start_time = time.time()
     
     try:
@@ -278,20 +312,21 @@ def suggest_from_files(file_names, output_markdown):
             input=SUGGESTION_PROMPT + "\n" + combined_output
         )
     except Exception as e:
+        spinner.stop()
         print(f"[red]Error generating response: {str(e)}[/red]")
         return False
     
     end_time = time.time()
     elapsed_time = round(end_time - start_time, 3)
     
-
+    spinner.stop()
     if output_markdown != "":
         try:
             with open(output_markdown, 'w') as f:
                 f.write(response.output_text)
         except Exception as e:
             print("[red]Failed to write to file[/red]")
-            
+        
         print(f"[green]Response saved in {output_markdown}[/green]")
         print(f"Elapsed time: {elapsed_time}s")
     else:

@@ -1,0 +1,28 @@
+% ==========================
+% File: utils/dot_generator.pl
+% Generazione di grafo Graphviz (dipendenze tra goal)
+% ==========================
+
+:- module(dot_generator, [
+	generate_dot/1,
+       	add_edge/2,
+       	clear_graph/0]).
+
+:- use_module(utils/command_runner).
+
+:- dynamic edge/2.
+
+add_edge(A, B) :- assertz(edge(A, B)).
+clear_graph :- retractall(edge(_, _)).
+
+generate_dot(DotFile) :-
+	open(DotFile, write, S),
+	write(S, 'digraph attack_flow {\n'),
+	write(S, '  node [shape=box, style=filled, color=lightgray];\n'),
+	forall(edge(A, B), format(S, '  "~w" -> "~w" [label="~w → ~w"];\n', [A, B, A, B])),
+	write(S, '}\n'),
+	close(S),
+	atom_concat(DotFile, '.png', PngFile),
+	atomic_list_concat(['dot -Tpng ', DotFile, ' -o ', PngFile], Cmd),
+	run_shell_command([Cmd], Out),
+	format("[DOT] Export result:~n~w~n", [Out]).

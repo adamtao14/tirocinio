@@ -1,0 +1,29 @@
+% ==========================
+% File: utils/time_utils.pl
+% Utilities per timestamp e durata
+% ==========================
+
+:- module(time_utils,[
+	timestamp/1,
+	duration/2,
+	now_unix/1,
+	timestamp_diff/3]).
+
+:- use_module(library(date)).
+
+timestamp(Stamp) :-
+	get_time(T),
+	format_time(atom(Stamp), '%Y-%m-%d %H:%M:%S', T).
+
+duration(Start, DurationSeconds) :-
+	get_time(End),
+	DurationSeconds is End - Start.
+
+now_unix(T) :- get_time(T).
+
+% Differenza tra due timestamp stringa (formato '%Y-%m-%d %H:%M:%S')
+timestamp_diff(TS1, TS2, Seconds) :-
+	parse_time(TS1, T1),
+	parse_time(TS2, T2),
+	number(T1), number(T2),
+	Seconds is T2 - T1.

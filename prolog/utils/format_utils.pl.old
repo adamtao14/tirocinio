@@ -1,0 +1,58 @@
+% ==========================
+% File: utils/format_utils.pl
+% Output e logging
+% ==========================
+
+:- module(format_utils, [
+		info/1,
+		warn/1,
+		error/1,
+		log_info/1,
+		log_warn/1,
+		log_error/1,
+		set_log_file/1,
+		set_log_level/1,
+		log_to_file/2
+		]).
+
+:- use_module(utils/time_utils).
+
+:- dynamic log_file/1.
+log_file('vapt.log').
+
+set_log_file(Path) :-
+	retractall(log_file(_)),
+	assertz(log_file(Path)).
+
+set_log_level(Level) :-
+	member(Level, [debug, info, warn, error]),
+	retractall(log_level(_)),
+	assertz(log_level(Level)).
+
+% livello minimo per scrivere il log
+log_level_priority(debug, 0).
+log_level_priority(info,  1).
+log_level_priority(warn,  2).
+log_level_priority(error, 3).
+
+should_log(Required) :-
+	log_level(Current),
+	log_level_priority(Current, CP),
+	log_level_priority(Required, RP),
+	RP >= CP.
+
+info(Msg)  :- should_log(info),  format('[INFO]  ~w~n', [Msg]), log_to_file('INFO', Msg).
+warn(Msg)  :- should_log(warn),  format('[WARN]  ~w~n', [Msg]), log_to_file('WARN', Msg).
+error(Msg) :- should_log(error), format('[ERROR] ~w~n', [Msg]), log_to_file('ERROR', Msg).
+
+log_info(Msg)  :- should_log(info),  timestamp(T), format('[INFO ~w]  ~w~n', [T, Msg]), log_to_file('INFO', Msg).
+log_warn(Msg)  :- should_log(warn),  timestamp(T), format('[WARN ~w]  ~w~n', [T, Msg]), log_to_file('WARN', Msg).
+log_error(Msg) :- should_log(error), timestamp(T), format('[ERROR ~w] ~w~n', [T, Msg]), log_to_file('ERROR', Msg).
+
+log_to_file(Level, Msg) :-
+	log_file(Path),
+	timestamp(TS),
+	atomic_list_concat(['[', Level, ' ', TS, '] ', Msg, '\n'], Line),
+	open(Path, append, Stream),
+	write(Stream, Line),
+	close(Stream).
