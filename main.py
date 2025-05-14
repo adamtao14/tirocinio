@@ -6,7 +6,7 @@ from pyswip import Prolog
 from typing import Optional
 from openai import OpenAI
 from dotenv import load_dotenv
-from prompts import BASE_PROMPT, SUGGESTION_PROMPT
+from prompts import BASE_PROMPT, SUGGESTION_PROMPT, ANALYZE_PROMPT
 from halo import Halo
 load_dotenv()
 
@@ -240,14 +240,14 @@ def query_prolog_file(file_name, query):
         return False
 
 # Generate via OpenAI's API a specific Prolog file for a given vulenerability attack
-def llm_generation(user_input):
+def llm_generation(user_input, prompt):
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     spinner = Halo(text='Generating response', spinner='dots')
     spinner.start()
     start_time = time.time()
     response = client.responses.create(
         model="gpt-4.1",
-        input=BASE_PROMPT + "\n" + user_input
+        input=prompt + "\n" + user_input
     )
     end_time = time.time()
     elapsed_time = round(end_time - start_time, 3)
@@ -394,7 +394,7 @@ def gen_ai(input = ""):
     if input == "":
         return
     else:
-        return llm_generation(input)
+        return llm_generation(input, SUGGESTION_PROMPT)
 
 @cli.command()
 @click.argument('file_names', type=click.Path(exists=True), nargs=-1)
@@ -404,7 +404,15 @@ def suggest(file_names, output_markdown):
     if not valid_files:
         click.echo("No valid Prolog files provided")
         return
-    return suggest_from_files(valid_files, output_markdown) 
+    return suggest_from_files(valid_files, output_markdown)
+
+@cli.command()
+@click.argument('input')
+def analyze(input):
+    if input == "":
+        return
+    else:
+        return llm_generation(input, ANALYZE_PROMPT)
 
 if __name__ == '__main__':
     cli()
