@@ -23,14 +23,18 @@ is_host_up_line(Line) :-
 
 % Improved IP extraction without singleton variables
 extract_ip_from_line(Line, IP) :-
-    sub_string(Line, Start, _, _, "Host: "),
-    sub_string(Line, Start+6, _, _, Rest),
-    (   sub_string(Rest, 0, Pos, _, " "),  % Find first space after IP
-        sub_string(Rest, 0, Pos, _, IP)
+    (   sub_string(Line, Start, _, _, "Host: "),  % This must succeed first
+        NextPos is Start + 6,                    % Then do arithmetic
+        sub_string(Line, NextPos, _, _, Rest),
+        (   sub_string(Rest, 0, Pos, _, " "),
+            sub_string(Rest, 0, Pos, _, IP)
+        ->  true
+        ;   IP = Rest
+        ),
+        validate_ip(IP)
     ->  true
-    ;   IP = Rest  % If no space found, use entire rest
-    ),
-    validate_ip(IP).
+    ;   fail  % Explicitly fail if "Host: " not found
+    ).
 
 % IP validation helper
 validate_ip(IP) :-
