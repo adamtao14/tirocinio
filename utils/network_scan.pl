@@ -37,4 +37,4 @@ validate_ip(IP) :-
     split_string(IP, ".", "", Parts),
     length(Parts, 4),
     maplist(number_string, [A,B,C,D], Parts),
-    maplist(between(0, 255), [A,B,C,D].
+    maplist(between(0, 255), [A,B,C,D]).
