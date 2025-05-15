@@ -229,7 +229,8 @@ def query_prolog_file(file_name, query):
         for i, result in enumerate(results, 1):
             print(f"\nResult {i}:")
             for key, value in result.items():
-                print(f"  {key} = {value}")
+                print(f"  {key}: ", end="")
+                print_prolog_value(value)
         if not in_same_dir:
             delete_temp_file(new_path)
         return True        
@@ -238,6 +239,29 @@ def query_prolog_file(file_name, query):
             delete_temp_file(new_path)
         print(f"Error executing query: {str(e)}")
         return False
+
+
+def print_prolog_value(value, indent=2):
+    """Recursively prints Prolog values in a readable format"""
+    indent_str = ' ' * indent
+    
+    if isinstance(value, bytes):
+        print(value.decode('utf-8'))
+    elif isinstance(value, list):
+        if not value:
+            print("[]")
+        else:
+            print()
+            for item in value:
+                print(f"{indent_str}- ", end="")
+                print_prolog_value(item, indent + 2)
+    elif isinstance(value, dict):
+        print()
+        for k, v in value.items():
+            print(f"{indent_str}{k}: ", end="")
+            print_prolog_value(v, indent + 2)
+    else:
+        print(value)
 
 # Generate via OpenAI's API a specific Prolog file for a given vulenerability attack
 def llm_generation(user_input, prompt):
