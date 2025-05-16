@@ -2,39 +2,35 @@
 
 :- use_module(library(process)).
 :- use_module(library(readutil)).
+:- use_module(library(lists)).
 
-% Entry point: analyze_services(+IP, -ServiceNames)
-analyze_services(IP, ServiceNames) :-
-    format(string(Cmd), "nmap -sV -Pn ~w -oG -", [IP]),
+% Entry point
+analyze_services(IP, Services) :-
+    format(string(Cmd), "nmap -sV ~w -oN -", [IP]),
     process_create(path(sh), ['-c', Cmd], [stdout(pipe(Out))]),
     read_stream_to_codes(Out, Codes),
     close(Out),
     string_codes(OutputStr, Codes),
-    extract_service_names(OutputStr, ServiceNames).
+    extract_services(OutputStr, Services).
 
-% Extract list of service names
-extract_service_names(Output, Names) :-
-    split_string(Output, "\n", "", Lines),
-    include(is_ports_line, Lines, PortLines),
-    maplist(parse_service_line, PortLines, ServiceLists),
-    flatten(ServiceLists, Services),
-    findall(Name, member(service(_, _, Name), Services), Names).
+% Extract relevant services from Nmap normal output
+extract_services(OutputStr, Services) :-
+    split_string(OutputStr, "\n", "", Lines),
+    include(is_port_line, Lines, PortLines),
+    maplist(parse_port_line, PortLines, Services).
 
-is_ports_line(Line) :-
-    sub_string(Line, _, _, _, "Ports: ").
+% Identify lines that start with a port format, e.g., "22/tcp"
+is_port_line(Line) :-
+    split_string(Line, " ", "", [First | _]),
+    sub_string(First, _, _, _, "/tcp"). % crude match, improve if needed
 
-parse_service_line(Line, Services) :-
-    sub_string(Line, Start, _, _, "Ports: "),
-    PortsStart is Start + 7,
-    sub_string(Line, PortsStart, _, 0, PortPart),
-    split_string(PortPart, ",", " ", RawPorts),
-    include(valid_open_service_entry, RawPorts, CleanPorts),
-    maplist(parse_service_entry, CleanPorts, Services).
-
-valid_open_service_entry(Entry) :-
-    sub_string(Entry, _, _, _, "/open/").
-
-parse_service_entry(Entry, service(Port, Protocol, Name)) :-
-    split_string(Entry, "/", "", [PortStr, _Status, Protocol | Rest]),
-    (Rest = [Name | _] ; Name = "unknown"),
-    number_string(Port, PortStr).
+% Parse a line like:
+% 22/tcp   open  ssh      OpenSSH 3.9p1 (protocol 1.99)
+parse_port_line(Line, service(Port, Proto, Name, Version)) :-
+    split_string(Line, " ", " \t", Tokens0),
+    exclude(==( ""), Tokens0, Tokens),  % remove empty strings
+    Tokens = [PortProto, "open", Name | VersionTokens],
+    split_string(PortProto, "/", "", [PortStr, Proto]),
+    number_string(Port, PortStr),
+    atomic_list_concat(VersionTokens, " ", VersionAtom),
+    atom_string(VersionAtom, Version).
