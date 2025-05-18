@@ -6,7 +6,7 @@ from pyswip import Prolog
 from typing import Optional
 from openai import OpenAI
 from dotenv import load_dotenv
-from prompts import BASE_PROMPT, SUGGESTION_PROMPT, ANALYZE_PROMPT
+from prompts import BASE_PROMPT, SUGGESTION_PROMPT, ANALYZE_PROMPT, EXPLOIT_PROMPT
 from halo import Halo
 load_dotenv()
 
@@ -275,8 +275,13 @@ def llm_generation(user_input, prompt):
     )
     end_time = time.time()
     elapsed_time = round(end_time - start_time, 3)
-   
-    file_name = user_input.replace(' ', '_')
+    
+
+    if len(user_input) <= 10:
+        file_name = user_input.replace(' ', '_')
+    else:
+        file_name = user_input[:10].replace(' ', '_')
+
     # if the file_name already exists, add a random number to the file_name
     if os.path.exists(file_name + ".pl"):
         file_name += "_" + str(randint(1,100))
@@ -437,6 +442,16 @@ def analyze(input):
         return
     else:
         return llm_generation(input, ANALYZE_PROMPT)
+
+@cli.command()
+@click.argument('input')
+def exploit(input):
+    if input == "":
+        return
+    else:
+        return llm_generation(input, EXPLOIT_PROMPT)
+
+
 
 if __name__ == '__main__':
     cli()
