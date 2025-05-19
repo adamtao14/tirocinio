@@ -435,6 +435,7 @@ def suggest(file_names, output_markdown):
         return
     return suggest_from_files(valid_files, output_markdown)
 
+# Generates the full process for exploitation of a system (better for simpler systems)
 @cli.command()
 @click.argument('input')
 def analyze(input):
@@ -442,7 +443,7 @@ def analyze(input):
         return
     else:
         return llm_generation(input, ANALYZE_PROMPT)
-
+# Generates the exploits for a specifica step in the overall process of exploiting a system
 @cli.command()
 @click.argument('input')
 def exploit(input):
