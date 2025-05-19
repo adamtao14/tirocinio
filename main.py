@@ -204,7 +204,7 @@ def query_prolog_file(file_name, query):
         print("[red]You must specify a query![/red]")
         return False
     try:
-        spinner = Halo(text='Loading', spinner='dots')
+        spinner = Halo(text='Loading\n', spinner='dots')
         spinner.start()
         prolog = Prolog()
         in_same_dir = is_in_same_dir(os.getcwd(), file_name)
