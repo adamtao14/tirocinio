@@ -95,6 +95,8 @@ Requirements:
 
     Keep the module minimal but effective — it's intended to be automatically chained with others.
 
+    In the case of sql injections, boolean based ones are preferred because they are simpler, risk and level values need to be high
+
 Observed Service Information:
 
 [USER WILL INSERT: Target IP, URL or endpoint, any known GET/POST parameters, structure of the web page or input fields, e.g., login form, search box, etc.]
@@ -113,5 +115,5 @@ Generate a Prolog file:
 
     Ensure that paths and tool names are generic (assume sqlmap is in PATH).
 
-    Make sure to generate ONLY prolog code, nothing else, if there is any information you want to add, make it into prolog comments
+    Make sure to generate ONLY prolog code, nothing else, if there is any information you want to add, make it into prolog comments, also specify via comments what the user could customize
 """
