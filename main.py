@@ -277,10 +277,10 @@ def llm_generation(user_input, prompt):
     elapsed_time = round(end_time - start_time, 3)
     
 
-    if len(user_input) <= 10:
+    if len(user_input) <= 20:
         file_name = user_input.replace(' ', '_')
     else:
-        file_name = user_input[:10].replace(' ', '_')
+        file_name = user_input[:20].replace(' ', '_')
 
     # if the file_name already exists, add a random number to the file_name
     if os.path.exists(file_name + ".pl"):
